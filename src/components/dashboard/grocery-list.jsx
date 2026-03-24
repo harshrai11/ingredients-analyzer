@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { ShoppingCart, Plus, Trash2, Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -50,29 +50,58 @@ export function GroceryList() {
   const [newItem, setNewItem] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("Other")
   const [filterCategory, setFilterCategory] = useState("All")
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch items on mount
+  useEffect(() => {
+    try {
+      const savedItems = localStorage.getItem('fitnessApp_groceries');
+      if (savedItems) {
+        setItems(JSON.parse(savedItems) || []);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const addItem = useCallback((name, category) => {
-    if (!name.trim()) return
-    setItems((prev) => [
-      ...prev,
-      { id: Date.now().toString(), name: name.trim(), category, checked: false },
-    ])
-    setNewItem("")
-  }, [])
+    if (!name.trim()) return;
+    
+    setItems((prev) => {
+      const tempId = Date.now().toString();
+      const tempItem = { id: tempId, name: name.trim(), category, checked: false };
+      const newItems = [...prev, tempItem];
+      localStorage.setItem('fitnessApp_groceries', JSON.stringify(newItems));
+      return newItems;
+    });
+    setNewItem("");
+  }, []);
 
   const toggleItem = useCallback((id) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item))
-    )
-  }, [])
+    setItems((prev) => {
+      const newItems = prev.map((item) => (item.id === id ? { ...item, checked: !item.checked } : item));
+      localStorage.setItem('fitnessApp_groceries', JSON.stringify(newItems));
+      return newItems;
+    });
+  }, []);
 
   const removeItem = useCallback((id) => {
-    setItems((prev) => prev.filter((item) => item.id !== id))
-  }, [])
+    setItems((prev) => {
+      const newItems = prev.filter((item) => item.id !== id);
+      localStorage.setItem('fitnessApp_groceries', JSON.stringify(newItems));
+      return newItems;
+    });
+  }, []);
 
   const clearChecked = useCallback(() => {
-    setItems((prev) => prev.filter((item) => !item.checked))
-  }, [])
+    setItems((prev) => {
+      const newItems = prev.filter((item) => !item.checked);
+      localStorage.setItem('fitnessApp_groceries', JSON.stringify(newItems));
+      return newItems;
+    });
+  }, []);
 
   const filteredItems = filterCategory === "All" ? items : items.filter((i) => i.category === filterCategory)
   const checkedCount = items.filter((i) => i.checked).length

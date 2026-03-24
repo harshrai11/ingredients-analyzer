@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { TrendingUp, Plus, Trash2, Scale, Ruler, Target } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export function ProgressTracker() {
-  const [entries, setEntries] = useState([
-  
-  ])
+
+  const [entries, setEntries] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const [showForm, setShowForm] = useState(false)
   const [formDate, setFormDate] = useState("")
@@ -16,43 +16,111 @@ export function ProgressTracker() {
   const [formWaist, setFormWaist] = useState("")
   const [formNotes, setFormNotes] = useState("")
 
-  const addEntry = useCallback(() => {
+
+  // ⭐ FETCH FROM MONGODB
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/logs/all")
+        const data = await res.json()
+        const sorted = data.sort(
+  (a, b) => new Date(a.date) - new Date(b.date)
+)
+
+setEntries(sorted)
+      } catch (err) {
+        console.log(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchLogs()
+  }, [])
+
+
+
+  // ⭐ SAVE ENTRY TO DATABASE
+  const addEntry = useCallback(async () => {
+
     const w = parseFloat(formWeight)
     if (!formDate || w <= 0) return
 
     const newEntry = {
-      id: Date.now().toString(),
       date: formDate,
       weight: w,
-      bodyFat: formBodyFat ? parseFloat(formBodyFat) : undefined,
-      waist: formWaist ? parseFloat(formWaist) : undefined,
-      notes: formNotes,
+      bodyFat: formBodyFat,
+      waist: formWaist,
+      notes: formNotes
     }
 
-    setEntries((prev) => [...prev, newEntry].sort((a, b) => a.date.localeCompare(b.date)))
+    try {
+      const res = await fetch("http://localhost:5000/api/logs/add", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(newEntry)
+      })
+
+      const saved = await res.json()
+
+      setEntries(prev => [...prev, saved])
+
+    } catch (err) {
+      console.log(err)
+    }
+
     setFormDate("")
     setFormWeight("")
     setFormBodyFat("")
     setFormWaist("")
     setFormNotes("")
     setShowForm(false)
+
   }, [formDate, formWeight, formBodyFat, formWaist, formNotes])
 
-  const removeEntry = useCallback((id) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id))
+
+
+  // ⭐ DELETE ENTRY FROM DATABASE
+  const removeEntry = useCallback(async (id) => {
+
+    await fetch(`http://localhost:5000/api/logs/${id}`, {
+      method: "DELETE"
+    })
+
+    setEntries(prev => prev.filter(e => e._id !== id))
+
   }, [])
 
-  const latest = entries[entries.length - 1]
-  const first = entries[0]
-  const weightChange = latest && first ? (latest.weight - first.weight).toFixed(1) : "0"
-  const fatChange = latest?.bodyFat && first?.bodyFat ? (latest.bodyFat - first.bodyFat).toFixed(1) : null
-  const waistChange = latest?.waist && first?.waist ? (latest.waist - first.waist).toFixed(1) : null
 
-  const maxWeight = Math.max(...entries.map((e) => e.weight)) + 2
-  const minWeight = Math.min(...entries.map((e) => e.weight)) - 2
-  const weightRange = maxWeight - minWeight || 1
 
-  return (
+ 
+
+const latest = entries[entries.length - 1]
+const first = entries[0]
+
+const weightChange =
+  latest && first
+    ? (latest.weight - first.weight).toFixed(1)
+    : "0"
+
+const weights = entries.map(e => e.weight).filter(Boolean)
+const fatChange =
+  latest && first && latest.bodyFat && first.bodyFat
+    ? (latest.bodyFat - first.bodyFat).toFixed(1)
+    : null
+
+const waistChange =
+  latest && first && latest.waist && first.waist
+    ? (latest.waist - first.waist).toFixed(1)
+    : null
+const maxWeight = weights.length ? Math.max(...weights) + 2 : 100
+const minWeight = weights.length ? Math.min(...weights) - 2 : 50
+
+const weightRange = maxWeight - minWeight || 1;
+
+return (
     <div className="space-y-6 animate-fade-in-up">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -281,7 +349,7 @@ export function ProgressTracker() {
               <tbody>
                 {[...entries].reverse().map((entry, index) => (
                   <tr
-                    key={entry.id}
+                    key={entry._id}
                     className="border-b border-border/50 hover:bg-secondary/30 transition-colors animate-fade-in-up"
                     style={{ animationDelay: `${index * 30}ms` }}
                   >
@@ -298,7 +366,7 @@ export function ProgressTracker() {
                     <td className="px-5 py-2.5 text-muted-foreground hidden md:table-cell">{entry.notes || "-"}</td>
                     <td className="px-3 py-2.5">
                       <button
-                        onClick={() => removeEntry(entry.id)}
+                        onClick={() => removeEntry(entry._id)}
                         className="text-muted-foreground/40 hover:text-destructive transition-colors"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

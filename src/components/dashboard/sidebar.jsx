@@ -41,7 +41,7 @@ export function Sidebar({ activeSection, onSectionChange, collapsed, onToggle })
         </div>
         {!collapsed && (
           <div className="animate-fade-in-up">
-            <h1 className="text-lg font-bold font-mono text-sidebar-foreground tracking-tight">FitPulse</h1>
+            <h1 className="text-lg font-bold font-mono text-sidebar-foreground tracking-tight">FitMint</h1>
           </div>
         )}
       </Link>

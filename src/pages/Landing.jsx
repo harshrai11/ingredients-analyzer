@@ -17,7 +17,7 @@ export default function LandingPage() {
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
             <Activity className="w-6 h-6 text-primary" />
           </div>
-          <span className="text-xl font-bold tracking-tight">FitPulse</span>
+          <span className="text-xl font-bold tracking-tight">FitMint</span>
         </div>
         <div className="flex items-center gap-4">
           <Link to="/dashboard">
@@ -178,8 +178,12 @@ export default function LandingPage() {
                 <User className="w-6 h-6 text-muted-foreground" />
               </div>
               <div className="text-left">
-                <div className="font-medium">Alex Chen</div>
+                <div className="font-medium">Sparsh</div>
                 <div className="text-sm text-muted-foreground">Lost 15 lbs using FitPulse</div>
+              </div>
+              <div className="text-left">
+                <div className="font-medium">Sumit joshi </div>
+                <div className="text-sm text-muted-foreground">Best app i have used for fitness tracking</div>
               </div>
             </div>
           </div>

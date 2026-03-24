@@ -38,7 +38,7 @@ export function MobileNav({ activeSection, onSectionChange }) {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
             <Activity className="w-4 h-4 text-primary" />
           </div>
-          <h1 className="text-base font-bold font-mono text-foreground">FitPulse</h1>
+          <h1 className="text-base font-bold font-mono text-foreground">FitMint</h1>
         </Link>
         <button
           onClick={() => setOpen(!open)}

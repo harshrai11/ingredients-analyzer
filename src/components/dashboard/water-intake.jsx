@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Droplets, Plus, Minus, RotateCcw, GlassWater } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -23,30 +23,87 @@ export function WaterIntake() {
   const [weight, setWeight] = useState("70")
   const [consumed, setConsumed] = useState(0)
   const [logs, setLogs] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
 
   const goal = Math.round(parseFloat(weight || "70") * 35)
   const percentage = Math.min((consumed / goal) * 100, 100)
 
+  // Fetch today's data and user weight on mount
+  useEffect(() => {
+    const fetchWaterData = () => {
+      try {
+        const savedPrefs = localStorage.getItem('fitnessApp_userPrefs');
+        if (savedPrefs) {
+          const parsed = JSON.parse(savedPrefs);
+          if (parsed.weight) setWeight(parsed.weight.toString());
+        }
+        
+        const savedTracker = localStorage.getItem('fitnessApp_waterTracker');
+        if (savedTracker) {
+          const parsed = JSON.parse(savedTracker);
+          if (parsed.date === new Date().toDateString()) {
+            setLogs(parsed.logs || []);
+            setConsumed(parsed.consumed || 0);
+          } else {
+            setLogs([]);
+            setConsumed(0);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load water data", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchWaterData();
+  }, []);
+
   const addWater = useCallback((amount) => {
-    setConsumed((prev) => prev + amount)
-    setLogs((prev) => [
-      { time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }), amount },
-      ...prev,
-    ])
-  }, [])
+    const timeString = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    
+    setConsumed((prev) => {
+      const newConsumed = prev + amount;
+      setLogs((prevLogs) => {
+        const newLogs = [{ time: timeString, amount }, ...prevLogs];
+        localStorage.setItem('fitnessApp_waterTracker', JSON.stringify({
+          date: new Date().toDateString(),
+          consumed: newConsumed,
+          logs: newLogs
+        }));
+        return newLogs;
+      });
+      return newConsumed;
+    });
+  }, []);
 
   const removeWater = useCallback(() => {
-    if (logs.length > 0) {
-      const lastLog = logs[0]
-      setConsumed((prev) => Math.max(0, prev - lastLog.amount))
-      setLogs((prev) => prev.slice(1))
-    }
-  }, [logs])
+    setLogs((prevLogs) => {
+      if (prevLogs.length === 0) return prevLogs;
+      const lastLog = prevLogs[0];
+      const newLogs = prevLogs.slice(1);
+      
+      setConsumed((prev) => {
+        const newConsumed = Math.max(0, prev - lastLog.amount);
+        localStorage.setItem('fitnessApp_waterTracker', JSON.stringify({
+          date: new Date().toDateString(),
+          consumed: newConsumed,
+          logs: newLogs
+        }));
+        return newConsumed;
+      });
+      return newLogs;
+    });
+  }, []);
 
   const reset = useCallback(() => {
-    setConsumed(0)
-    setLogs([])
-  }, [])
+    setConsumed(0);
+    setLogs([]);
+    localStorage.setItem('fitnessApp_waterTracker', JSON.stringify({
+      date: new Date().toDateString(),
+      consumed: 0,
+      logs: []
+    }));
+  }, []);
 
   const waveHeight = Math.min(percentage, 100)
 
@@ -71,7 +128,19 @@ export function WaterIntake() {
             <input
               type="number"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                setWeight(e.target.value);
+                if (parseFloat(e.target.value) > 0) {
+                  try {
+                    const savedPrefs = localStorage.getItem('fitnessApp_userPrefs');
+                    const prefs = savedPrefs ? JSON.parse(savedPrefs) : {};
+                    prefs.weight = parseFloat(e.target.value);
+                    localStorage.setItem('fitnessApp_userPrefs', JSON.stringify(prefs));
+                  } catch (e) {
+                      console.error(e);
+                  }
+                }
+              }}
               className="w-full px-4 py-2.5 rounded-lg bg-input border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-sm"
             />
             <p className="text-xs text-muted-foreground mt-1.5">
